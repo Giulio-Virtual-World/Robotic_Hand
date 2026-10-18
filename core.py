@@ -1,68 +1,17 @@
 """
 
 Author: Giulio Segre
-Last modified date: 26-07-2026
+Last modified date: 08-10-2026
 www.giulio-virtual-world.com
 
 
 =========================================================================================
- SASSO - CARTA - FORBICI  +  CONTEGGIO DITA IN TEMPO REALE
+ SASSO - CARTA - FORBICI  +  CONTEGGIO DITA IN TEMPO REALE + Controllo ESP32
  Basato su MediaPipe Tasks - GestureRecognizer (modalita' LIVE_STREAM)
 =========================================================================================
 
-COSA FA QUESTO SCRIPT
-----------------------
-1. Apre la webcam e processa il flusso video in tempo reale usando la modalita'
-   LIVE_STREAM del GestureRecognizer di MediaPipe (asincrona, con callback).
-2. Riconosce i gesti "canned" (predefiniti) del modello:
-   Closed_Fist, Open_Palm, Victory, Thumb_Up, Thumb_Down, Pointing_Up, ILoveYou, None.
-3. In parallelo, calcola in modo indipendente (dai 21 landmark della mano) quante e
-   quali dita sono alzate, e le mostra in una interfaccia grafica overlay su OpenCV.
-   
-   Mostra inoltre il gesto che si sta facendo per il gioco: "sasso carta forbici":
-   
-       Vecchia logica:
-           Closed_Fist  -> SASSO
-           Open_Palm    -> CARTA
-           Victory      -> FORBICI
+Script principale (leggi README.md per istruzioni).
 
-       Nuova logica:
-          0 dita alzate   -> SASSO
-          5 dita alzate   -> CARTA
-          indice+medio    -> FORBICI
-
-
-PERCHE' LIVE_STREAM E NON IMAGE/VIDEO
---------------------------------------
-- IMAGE  : per una singola immagine statica (foto).
-- VIDEO  : per un file video gia' registrato, elaborato in modo sincrono
-           frame per frame con recognize_for_video().
-- LIVE_STREAM: pensata apposta per input continuo in tempo reale (webcam).
-  E' ASINCRONA: si invia un frame con recognize_async(image, timestamp_ms) e il
-  risultato arriva DOPO, tramite una funzione di callback (result_callback) passata
-  in fase di creazione delle opzioni. Il timestamp deve essere monotono crescente,
-  altrimenti MediaPipe scarta il frame.
-
-INSTALLAZIONE
---------------
-    pip install mediapipe opencv-python
-
-MODELLO
--------
-Il task richiede un modello .task pre-addestrato (non e' incluso nel pacchetto pip).
-Lo script lo scarica automaticamente al primo avvio nella cartella corrente.
-Se preferisci scaricarlo manualmente:
-    https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task
-
-AVVIO
------
-    python core.py
-
-COMANDI A RUNTIME
-------------------
-    q  -> esci
-    m  -> mostra/nascondi i 21 landmark della mano
-=========================================================================================
 """
 
 import os
@@ -73,6 +22,8 @@ from collections import deque
 import cv2
 import numpy as np
 import mediapipe as mp
+
+import api  # Comunicazione con ESP32 via Bluetooth (./api.py)
 
 # ----------------------------------------------------------------------------------------
 # ALIAS ALLE CLASSI MEDIAPIPE (come da documentazione ufficiale)
@@ -93,6 +44,7 @@ MODEL_URL = (
     "gesture_recognizer/float16/1/gesture_recognizer.task"
 )
 
+
 # Indici dei landmark della mano (schema standard MediaPipe Hands, 21 punti)
 WRIST = 0
 THUMB_TIP, THUMB_IP, THUMB_MCP = 4, 3, 2
@@ -102,6 +54,13 @@ RING_TIP, RING_PIP, RING_MCP = 16, 14, 13
 PINKY_TIP, PINKY_PIP, PINKY_MCP = 20, 18, 17
 
 FINGER_NAMES = ["Pollice", "Indice", "Medio", "Anulare", "Mignolo"]
+
+'''
+Soglie per decidere se un dito e' abbassato (distanze NORMALIZZATE sulla dimensione
+della mano = distanza polso -> base del medio). Piu' alto = piu' facile "abbassato".
+'''
+FINGER_CLOSE_RATIO = 0.60  # indice/medio/anulare/mignolo: punta vs. propria base (MCP)
+THUMB_CLOSE_RATIO = 0.45   # pollice: punta vs. base (MCP) di un qualsiasi altro dito
 
 
 # ----------------------------------------------------------------------------------------
@@ -130,37 +89,37 @@ def _dist(a, b):
 
 
 def count_fingers(hand_landmarks, handedness_label: str):
-    """
+    '''
     Restituisce (numero_dita_alzate, lista_booleana_per_dito[Pollice,Indice,Medio,Anulare,Mignolo])
 
-    Logica:
-    - Per le 4 dita lunghe (indice, medio, anulare, mignolo): un dito e' considerato
-      "alzato" se la punta (TIP) e' sopra (coordinata y minore, in un sistema immagine
-      con origine in alto a sinistra) l'articolazione PIP.
-    - Per il pollice si usa un criterio GEOMETRICO basato sulle distanze interne alla
-      mano, invece che sulla posizione assoluta x: il pollice e' considerato "disteso"
-      se la sua punta (TIP) e' piu' lontana dalla base del mignolo (landmark 17) di
-      quanto lo sia l'articolazione MCP del pollice stesso. Quando il pollice si piega
-      verso il palmo, la punta si avvicina a quella zona; quando e' disteso, se ne
-      allontana. Questo approccio funziona indipendentemente dal fatto che la mano sia
-      destra o sinistra e indipendentemente da eventuali flip/specchiature dell'immagine
-      (a differenza del confronto sulla sola coordinata x, che dipende da convenzioni
-      di mirroring facili da invertire per errore).
-    """
+    Logica (basata esclusivamente su DISTANZE, indipendente da rotazione/flip della mano):
+    - Le distanze sono normalizzate sulla "dimensione della mano" (distanza polso -> base
+      del medio), cosi' i risultati non dipendono da quanto la mano e' vicina alla webcam.
+    - Indice, medio, anulare, mignolo: il dito e' ABBASSATO se la punta (TIP) e'
+      abbastanza vicina alla base del dito stesso (MCP); altrimenti e' alzato.
+    - Pollice: e' ABBASSATO se la punta e' abbastanza vicina alla base (MCP) di
+      QUALSIASI altro dito (indice, medio, anulare o mignolo); altrimenti e' alzato.
+    '''
     lm = hand_landmarks  # lista di 21 landmark normalizzati (x, y, z) in [0, 1]
+
+    hand_size = max(_dist(lm[WRIST], lm[MIDDLE_MCP]), 1e-6)
 
     fingers_up = [False, False, False, False, False]
 
-    # --- Pollice (criterio a distanza, robusto e indipendente dalla mano/flip) ---
-    dist_tip = _dist(lm[THUMB_TIP], lm[PINKY_MCP])
-    dist_mcp = _dist(lm[THUMB_MCP], lm[PINKY_MCP])
-    fingers_up[0] = dist_tip > dist_mcp * 1.1  # margine 10% per evitare falsi positivi
+    # --- Pollice: abbassato se la punta e' vicina alla base di un qualsiasi altro dito ---
+    other_bases = [INDEX_MCP, MIDDLE_MCP, RING_MCP, PINKY_MCP]
+    thumb_down = any(
+        _dist(lm[THUMB_TIP], lm[base]) / hand_size < THUMB_CLOSE_RATIO
+        for base in other_bases
+    )
+    fingers_up[0] = not thumb_down
 
-    # --- Indice, Medio, Anulare, Mignolo ---
+    # --- Indice, Medio, Anulare, Mignolo: abbassato se la punta e' vicina alla propria base ---
     tips = [INDEX_TIP, MIDDLE_TIP, RING_TIP, PINKY_TIP]
-    pips = [INDEX_PIP, MIDDLE_PIP, RING_PIP, PINKY_PIP]
-    for i, (tip, pip) in enumerate(zip(tips, pips), start=1):
-        fingers_up[i] = lm[tip].y < lm[pip].y
+    mcps = [INDEX_MCP, MIDDLE_MCP, RING_MCP, PINKY_MCP]
+    for i, (tip, mcp) in enumerate(zip(tips, mcps), start=1):
+        finger_down = _dist(lm[tip], lm[mcp]) / hand_size < FINGER_CLOSE_RATIO
+        fingers_up[i] = not finger_down
 
     return sum(fingers_up), fingers_up
 
@@ -380,6 +339,20 @@ def main():
                     px_landmarks = [(int(p.x * w), int(p.y * h)) for p in hand_landmarks]
                     draw_landmarks(frame, px_landmarks, HandLandmarksConnections.HAND_CONNECTIONS)
 
+
+
+                #--------------------------------------------------------------------------------
+                #--------------------- Invio comando a ESP32 via Bluetooth ---------------------
+                #--------------------------------------------------------------------------------
+                ex_fingers_pattern = globals().get('ex_fingers_pattern', -1)  # Recupera il valore globale
+                if fingers_up != ex_fingers_pattern: # Invia solo se il pattern dita e' cambiato rispetto all'ultimo invio
+                    globals()['ex_fingers_pattern'] = fingers_up  # Aggiorna il valore globale
+                    ex_fingers_pattern = fingers_up
+                    print(f"[INFO] Pattern dita: {fingers_up}, gesto S/C/F: {rps_label}")
+                    api.send_command_to_esp32(rps_label, fingers_count, fingers_up) # Funzione in api.py
+
+
+
             # --- FPS ---
             now = time.time()
             fps_window.append(1.0 / max(now - prev_time, 1e-6))
@@ -389,7 +362,7 @@ def main():
             draw_ui(frame, rps_label, canned_gesture_label, canned_gesture_score,
                     fingers_count, fingers_up, fps)
 
-            cv2.imshow("Sasso Carta Forbici - MediaPipe GestureRecognizer", frame)
+            cv2.imshow("GVW HandTracking - Based on MediaPipe GestureRecognizer", frame)
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
