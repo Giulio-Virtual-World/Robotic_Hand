@@ -30,7 +30,7 @@ Mostra inoltre il gesto che si sta facendo per il gioco: "sasso carta forbici":
 
 
 # INSTALLAZIONE
-**Per installare gli script, modello e librerie esegui il file [`installer.py`](./installer.py).**
+**Per installare gli script, modello e librerie esegui il file [`source/installer.py`](./source/installer.py).**
 
 Se il file non dovesse funzionare puoi installarli manualmente aprendo il terminale (`cmd`) ed eseguendo i seguenti comandi:
 
@@ -54,7 +54,7 @@ Se il file non dovesse funzionare puoi installarli manualmente aprendo il termin
 
 
 # AVVIO
-**Per avviare lo script esegui il file [`start.py`](./start.py).**
+**Per avviare lo script esegui il file [`source/start.py`](./source/start.py).**
 
 Se il file non dovesse funzionare puoi avviarlo manualmente aprendo il terminale nella cartella del progetto e digitando i seguenti comandi:
 
@@ -116,7 +116,7 @@ thumb_down = any(
 fingers_up[0] = not thumb_down
 ```
 
-**Soglie:** sono definite come costanti in cima a [`core.py`](./core.py) e possono essere regolate in base alla propria mano e alla webcam:
+**Soglie:** sono definite come costanti in cima a [`core.py`](./source/core.py) e possono essere regolate in base alla propria mano e alla webcam:
 ```python
 FINGER_CLOSE_RATIO = 0.60  # dita lunghe: punta vs. propria base (MCP)
 THUMB_CLOSE_RATIO = 0.45   # pollice: punta vs. base (MCP) di qualsiasi altro dito
@@ -168,12 +168,12 @@ if fingers_count != ex_fingers_count:
     )
 ```
 
-Il formato JSON del messaggio effettivamente trasmesso dipende dall'implementazione della funzione `send_command_to_esp32()` presente nel file [`api.py`](./api.py). Lo script principale, infatti, non costruisce direttamente il JSON: passa alla funzione i tre valori già elaborati:
+Il formato JSON del messaggio effettivamente trasmesso dipende dall'implementazione della funzione `send_command_to_esp32()` presente nel file [`api.py`](./source/api.py). Lo script principale, infatti, non costruisce direttamente il JSON: passa alla funzione i tre valori già elaborati:
 ```python
 api.send_command_to_esp32(rps_label, fingers_count, fingers_up)
 ```
 
-Infine, il file [`api.py`](./api.py) si occupa di costruire il seguente JSON e inviarlo tramite Bluetooth all'ESP32, che riceve il messaggio e lo interpreta per eseguire le azioni corrispondenti.
+Infine, il file [`api.py`](./source/api.py) si occupa di costruire il seguente JSON e inviarlo tramite Bluetooth all'ESP32, che riceve il messaggio e lo interpreta per eseguire le azioni corrispondenti.
 ```python
 payload = {
         "rps_label": rps_label,
@@ -189,4 +189,4 @@ payload = {
 
 [*www.giulio-virtual-world.com*](https://www.giulio-virtual-world.com)
 
-**Last modified date:** *08-10-2026*
+**Last modified date:** *19-10-2026*
