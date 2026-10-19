@@ -1,4 +1,5 @@
 '''
+Copyright (c) 2026 GVW - Questo file è protetto dalla licenza AGPL-3.0.
 
 Author: Giulio Segre
 Last modified date: 06-08-2026
