@@ -11,6 +11,17 @@
 int patternVector[5]; // vettore dita
 int previusPatternVector[5];
 
+// Pin Ponti H (motori a,b,c,d,e)
+const int a1 = 15;
+const int a2 = 2;
+const int b1 = 0;
+const int b2 = 4;
+const int c1 = 16;
+const int c2 = 17;
+const int d1 = 5;
+const int d2 = 18;
+const int e1 = 19;
+const int e2 = 21;
 
 BLECharacteristic *pCharacteristic;
 bool deviceConnected = false;
@@ -74,21 +85,71 @@ class CharCallbacks : public BLECharacteristicCallbacks {
 
 void contractFinger(int i) {
   switch(i) { // Temporaneo print in console
-    case 0: Serial.println("Contrazione Pollice"); break;
-    case 1: Serial.println("Contrazione Indice"); break;
-    case 2: Serial.println("Contrazione Medio"); break;
-    case 3: Serial.println("Contrazione Anulare"); break;
-    case 4: Serial.println("Contrazione Mignolo"); break;
+    case 0:
+      Serial.println("Contrazione Pollice");
+      digitalWrite(a1, LOW);
+      delay(1000);  // TEST TEMPORANEO, IL DELAY QUì MI RALLENTA TUTTO IL PROGRAMMA E LA SEQUENZA!  <-------------
+      digitalWrite(a1, HIGH);
+      break;
+    case 1:
+      Serial.println("Contrazione Indice");
+      digitalWrite(b1, LOW);
+      delay(1000);
+      digitalWrite(b1, HIGH);
+      break;
+    case 2:
+      Serial.println("Contrazione Medio");
+      digitalWrite(c1, LOW);
+      delay(1000);
+      digitalWrite(c1, HIGH);
+      break;
+    case 3:
+      Serial.println("Contrazione Anulare");
+      digitalWrite(d1, LOW);
+      delay(1000);
+      digitalWrite(d1, HIGH);
+      break;
+    case 4:
+      Serial.println("Contrazione Mignolo");
+      digitalWrite(e1, LOW);
+      delay(1000);
+      digitalWrite(e1, HIGH);
+      break;
     default: Serial.println("Errore Contrazione: dito " + String(i) + " non valido");
   }
 }
 void decontractFinger(int i) {
   switch(i) { // Temporaneo print in console
-    case 0: Serial.println("Decontrazione Pollice"); break;
-    case 1: Serial.println("Decontrazione Indice"); break;
-    case 2: Serial.println("Decontrazione Medio"); break;
-    case 3: Serial.println("Decontrazione Anulare"); break;
-    case 4: Serial.println("Decontrazione Mignolo"); break;
+    case 0:
+      Serial.println("Decontrazione Pollice");
+      digitalWrite(a2, LOW);
+      delay(1000);
+      digitalWrite(a2, HIGH);
+      break;
+    case 1:
+      Serial.println("Decontrazione Indice");
+      digitalWrite(b2, LOW);
+      delay(1000);
+      digitalWrite(b2, HIGH);
+      break;
+    case 2:
+      Serial.println("Decontrazione Medio");
+      digitalWrite(c2, LOW);
+      delay(1000);
+      digitalWrite(c2, HIGH);
+      break;
+    case 3:
+      Serial.println("Decontrazione Anulare");
+      digitalWrite(d2, LOW);
+      delay(1000);
+      digitalWrite(d2, HIGH);
+      break;
+    case 4:
+      Serial.println("Decontrazione Mignolo");
+      digitalWrite(e2, LOW);
+      delay(1000);
+      digitalWrite(e2, HIGH);
+      break;
     default: Serial.println("Errore Decontrazione: dito " + String(i) + " non valido");
   }
 }
@@ -122,6 +183,28 @@ void setup() {
   BLEDevice::startAdvertising();
 
   Serial.println("In attesa di connessioni BLE...");
+
+  // Definisci e spegni i ponti H (si attivano con ingresso a massa)
+  pinMode(a1, OUTPUT);
+  pinMode(a2, OUTPUT);
+  pinMode(b1, OUTPUT);
+  pinMode(b2, OUTPUT);
+  pinMode(c1, OUTPUT);
+  pinMode(c2, OUTPUT);
+  pinMode(d1, OUTPUT);
+  pinMode(d2, OUTPUT);
+  pinMode(e1, OUTPUT);
+  pinMode(e2, OUTPUT);
+  digitalWrite(a1, HIGH);
+  digitalWrite(a2, HIGH);
+  digitalWrite(b1, HIGH);
+  digitalWrite(b2, HIGH);
+  digitalWrite(c1, HIGH);
+  digitalWrite(c2, HIGH);
+  digitalWrite(d1, HIGH);
+  digitalWrite(d2, HIGH);
+  digitalWrite(e1, HIGH);
+  digitalWrite(e2, HIGH);
 }
 
 void loop() {
