@@ -208,7 +208,7 @@ void loop() {
     for(int i=0; i<5; i++) {
       patternVector[i] = (pattern[i] == '1') ? 1 : 0; // Converte il carattere ASCII in un vettore con numeri interi 0 oppure 1
 
-      if (patternVector[i] != previusPatternVector[i] && i<5) { // se lo stato del dito e' cambiato
+      if (patternVector[i] != previusPatternVector[i]) { // se lo stato del dito e' cambiato
         patternVector[i] ? decontractFinger(i) : contractFinger(i);
         previusPatternVector[i] = patternVector[i]; // aggiorna lo stato precedente
       }
