@@ -23,6 +23,9 @@ const int d2 = 18;
 const int e1 = 19;
 const int e2 = 21;
 
+const int fingerContractionTime = 1000; // Quanto tempo ci mettono le dita per contrarsi [ms]
+
+
 BLECharacteristic *pCharacteristic;
 bool deviceConnected = false;
 
@@ -84,74 +87,70 @@ class CharCallbacks : public BLECharacteristicCallbacks {
 };
 
 void contractFinger(int i) {
-  switch(i) { // Temporaneo print in console
+  switch(i) {
     case 0:
       Serial.println("Contrazione Pollice");
       digitalWrite(a1, LOW);
-      delay(1000);  // TEST TEMPORANEO, IL DELAY QUì MI RALLENTA TUTTO IL PROGRAMMA E LA SEQUENZA!  <-------------
-      digitalWrite(a1, HIGH);
       break;
     case 1:
       Serial.println("Contrazione Indice");
       digitalWrite(b1, LOW);
-      delay(1000);
-      digitalWrite(b1, HIGH);
       break;
     case 2:
       Serial.println("Contrazione Medio");
       digitalWrite(c1, LOW);
-      delay(1000);
-      digitalWrite(c1, HIGH);
       break;
     case 3:
       Serial.println("Contrazione Anulare");
       digitalWrite(d1, LOW);
-      delay(1000);
-      digitalWrite(d1, HIGH);
       break;
     case 4:
       Serial.println("Contrazione Mignolo");
       digitalWrite(e1, LOW);
-      delay(1000);
-      digitalWrite(e1, HIGH);
       break;
+
     default: Serial.println("Errore Contrazione: dito " + String(i) + " non valido");
   }
 }
 void decontractFinger(int i) {
-  switch(i) { // Temporaneo print in console
+  switch(i) {
     case 0:
       Serial.println("Decontrazione Pollice");
       digitalWrite(a2, LOW);
-      delay(1000);
-      digitalWrite(a2, HIGH);
       break;
     case 1:
       Serial.println("Decontrazione Indice");
       digitalWrite(b2, LOW);
-      delay(1000);
-      digitalWrite(b2, HIGH);
       break;
     case 2:
       Serial.println("Decontrazione Medio");
       digitalWrite(c2, LOW);
-      delay(1000);
-      digitalWrite(c2, HIGH);
       break;
     case 3:
       Serial.println("Decontrazione Anulare");
       digitalWrite(d2, LOW);
-      delay(1000);
-      digitalWrite(d2, HIGH);
       break;
     case 4:
       Serial.println("Decontrazione Mignolo");
       digitalWrite(e2, LOW);
-      delay(1000);
-      digitalWrite(e2, HIGH);
       break;
+
     default: Serial.println("Errore Decontrazione: dito " + String(i) + " non valido");
   }
+}
+
+void stopFinger() { // Spegni i ponti H (si attivano con ingresso a massa)
+  delay(fingerContractionTime);
+  digitalWrite(a1, HIGH);
+  digitalWrite(a2, HIGH);
+  digitalWrite(b1, HIGH);
+  digitalWrite(b2, HIGH);
+  digitalWrite(c1, HIGH);
+  digitalWrite(c2, HIGH);
+  digitalWrite(d1, HIGH);
+  digitalWrite(d2, HIGH);
+  digitalWrite(e1, HIGH);
+  digitalWrite(e2, HIGH);
 }
 
 void setup() {
@@ -184,7 +183,7 @@ void setup() {
 
   Serial.println("In attesa di connessioni BLE...");
 
-  // Definisci e spegni i ponti H (si attivano con ingresso a massa)
+  // Definisci e spegni i ponti H
   pinMode(a1, OUTPUT);
   pinMode(a2, OUTPUT);
   pinMode(b1, OUTPUT);
@@ -195,21 +194,10 @@ void setup() {
   pinMode(d2, OUTPUT);
   pinMode(e1, OUTPUT);
   pinMode(e2, OUTPUT);
-  digitalWrite(a1, HIGH);
-  digitalWrite(a2, HIGH);
-  digitalWrite(b1, HIGH);
-  digitalWrite(b2, HIGH);
-  digitalWrite(c1, HIGH);
-  digitalWrite(c2, HIGH);
-  digitalWrite(d1, HIGH);
-  digitalWrite(d2, HIGH);
-  digitalWrite(e1, HIGH);
-  digitalWrite(e2, HIGH);
+  stopFinger();
 }
 
 void loop() {
-  delay(1000);
-
   // Elabora il pattern SOLO quando ne arriva uno nuovo via BLE
   // (per non rifare la stessa azione ogni secondo a vuoto).
   if (newPatternAvailable) {
@@ -220,10 +208,11 @@ void loop() {
     for(int i=0; i<5; i++) {
       patternVector[i] = (pattern[i] == '1') ? 1 : 0; // Converte il carattere ASCII in un vettore con numeri interi 0 oppure 1
 
-      if (patternVector[i] != previusPatternVector[i]) { // se lo stato del dito e' cambiato
+      if (patternVector[i] != previusPatternVector[i] && i<5) { // se lo stato del dito e' cambiato
         patternVector[i] ? decontractFinger(i) : contractFinger(i);
         previusPatternVector[i] = patternVector[i]; // aggiorna lo stato precedente
       }
     }
+    stopFinger(); // Ferma tutti i movimenti dei diti
   }
 }
