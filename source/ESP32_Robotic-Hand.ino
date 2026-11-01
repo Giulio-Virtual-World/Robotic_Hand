@@ -8,8 +8,8 @@
 #define CHARACTERISTIC_UUID "0000ffe1-0000-1000-8000-00805f9b34fb" // UUID per il collegamento al pc
 // -----------------------------------------------------------------------
 
-int patternVector[5]; // vettore dita
-int previusPatternVector[5];
+int patternVector[5] = {1, 1, 1, 1, 1}; // vettore dita
+int previusPatternVector[5] =  {1, 1, 1, 1, 1};
 
 // Pin Ponti H (motori a,b,c,d,e)
 const int a1 = 15;
@@ -23,7 +23,9 @@ const int d2 = 18;
 const int e1 = 19;
 const int e2 = 21;
 
-const int fingerContractionTime = 1000; // Quanto tempo ci mettono le dita per contrarsi [ms]
+// Config
+const int contractionTimes[5]   = {1000, 1000, 1000, 800, 1000}; // Quanto tempo ci mettono le dita per decontrarsi [ms] - (Pollice, Indice, Medio, Anulare, Mignolo)
+const int decontractionTimes[5] = {800, 800, 800, 600, 700}; // Quanto tempo ci mettono le dita per contrarsi [ms] - (Pollice, Indice, Medio, Anulare, Mignolo)
 
 
 BLECharacteristic *pCharacteristic;
@@ -33,7 +35,7 @@ bool deviceConnected = false;
 // fingers_pattern e' una stringa di 5 cifre "1"/"0" nell'ordine
 // [Pollice, Indice, Medio, Anulare, Mignolo], come prodotta da api.py
 volatile bool newPatternAvailable = false;
-String currentFingersPattern = "00000";
+String currentFingersPattern = "11111"; // Normalmente alzate
 
 // --- Estrae il valore di una chiave stringa da un JSON "piatto" tipo -------
 // {"rps_label": "...", "fingers_count": 3, "fingers_pattern": "01100", "ts": ...}
@@ -88,24 +90,24 @@ class CharCallbacks : public BLECharacteristicCallbacks {
 
 void contractFinger(int i) {
   switch(i) {
-    case 0:
-      Serial.println("Contrazione Pollice");
+    case 4:
+      Serial.println("Contrazione Mignolo");
       digitalWrite(a1, LOW);
       break;
-    case 1:
-      Serial.println("Contrazione Indice");
+    case 3:
+      Serial.println("Contrazione Anulare");
       digitalWrite(b1, LOW);
       break;
     case 2:
       Serial.println("Contrazione Medio");
       digitalWrite(c1, LOW);
       break;
-    case 3:
-      Serial.println("Contrazione Anulare");
+    case 1:
+      Serial.println("Contrazione Indice");
       digitalWrite(d1, LOW);
       break;
-    case 4:
-      Serial.println("Contrazione Mignolo");
+    case 0:
+      Serial.println("Contrazione Pollice");
       digitalWrite(e1, LOW);
       break;
 
@@ -114,24 +116,24 @@ void contractFinger(int i) {
 }
 void decontractFinger(int i) {
   switch(i) {
-    case 0:
-      Serial.println("Decontrazione Pollice");
+    case 4:
+      Serial.println("Decontrazione Mignolo");
       digitalWrite(a2, LOW);
       break;
-    case 1:
-      Serial.println("Decontrazione Indice");
+    case 3:
+      Serial.println("Decontrazione Anulare");
       digitalWrite(b2, LOW);
       break;
     case 2:
       Serial.println("Decontrazione Medio");
       digitalWrite(c2, LOW);
       break;
-    case 3:
-      Serial.println("Decontrazione Anulare");
+    case 1:
+      Serial.println("Decontrazione Indice");
       digitalWrite(d2, LOW);
       break;
-    case 4:
-      Serial.println("Decontrazione Mignolo");
+    case 0:
+      Serial.println("Decontrazione Pollice");
       digitalWrite(e2, LOW);
       break;
 
@@ -139,8 +141,7 @@ void decontractFinger(int i) {
   }
 }
 
-void stopFinger() { // Spegni i ponti H (si attivano con ingresso a massa)
-  delay(fingerContractionTime);
+void stopAllFingers() { // Spegni i ponti H (si attivano con ingresso a massa)
   digitalWrite(a1, HIGH);
   digitalWrite(a2, HIGH);
   digitalWrite(b1, HIGH);
@@ -151,6 +152,33 @@ void stopFinger() { // Spegni i ponti H (si attivano con ingresso a massa)
   digitalWrite(d2, HIGH);
   digitalWrite(e1, HIGH);
   digitalWrite(e2, HIGH);
+}
+
+void stopSingleFinger(int i) { // Spegne i due pin di un singolo dito
+  switch(i) {
+    case 4:
+      digitalWrite(a1, HIGH);
+      digitalWrite(a2, HIGH);
+      break;
+    case 3:
+      digitalWrite(b1, HIGH);
+      digitalWrite(b2, HIGH);
+      break;
+    case 2:
+      digitalWrite(c1, HIGH);
+      digitalWrite(c2, HIGH);
+      break;
+    case 1: 
+      digitalWrite(d1, HIGH);
+      digitalWrite(d2, HIGH);
+      break;
+    case 0:
+      digitalWrite(e1, HIGH);
+      digitalWrite(e2, HIGH);
+      break;
+
+    default: Serial.println("Errore nel fermare il dito: Dito " + String(i) + " non valido");
+  }
 }
 
 void setup() {
@@ -194,7 +222,7 @@ void setup() {
   pinMode(d2, OUTPUT);
   pinMode(e1, OUTPUT);
   pinMode(e2, OUTPUT);
-  stopFinger();
+  stopAllFingers();
 }
 
 void loop() {
@@ -204,15 +232,54 @@ void loop() {
     newPatternAvailable = false;
 
     String pattern = currentFingersPattern; // ordine: Pollice,Indice,Medio,Anulare,Mignolo
+    unsigned long durations[5] = {0, 0, 0, 0, 0}; // 0 = dito fermo
 
+    // Avvia i movimenti e memorizza la durata di ciascun dito
     for(int i=0; i<5; i++) {
       patternVector[i] = (pattern[i] == '1') ? 1 : 0; // Converte il carattere ASCII in un vettore con numeri interi 0 oppure 1
 
       if (patternVector[i] != previusPatternVector[i]) { // se lo stato del dito e' cambiato
-        patternVector[i] ? decontractFinger(i) : contractFinger(i);
+        if (patternVector[i]) {
+          decontractFinger(i);
+          durations[i] = decontractionTimes[i];
+        } else {
+          contractFinger(i);
+          durations[i] = contractionTimes[i];
+        }
         previusPatternVector[i] = patternVector[i]; // aggiorna lo stato precedente
       }
     }
-    stopFinger(); // Ferma tutti i movimenti dei diti
+
+    // Spegne ogni dito quando scade il suo tempo
+    // Salva l'istante in cui sono partiti i motori. Tutti i tempi verranno misurati rispetto a questo momento.
+    unsigned long startTime = millis();
+
+    // Flag che tiene vivo il ciclo finché almeno un dito è ancora in movimento.
+    bool anyActive = true;
+
+    while (anyActive) {
+      // Se tutti i diti hanno finito, ma trova un dito ancora attivo più sotto, lo rimette a true.
+      anyActive = false;
+
+      // Tempo trascorso da quando i motori sono partiti [ms].
+      // La sottrazione è sicura anche se millis() va in overflow (~49 giorni), perché si usano unsigned long.
+      unsigned long elapsed = millis() - startTime;
+
+      // Controlla ogni dito, uno per uno
+      for (int i = 0; i < 5; i++) {
+
+        // durations[i] > 0 significa che il dito si sta muovendo.
+        // 0 vale sia per le dita che non dovevano muoversi sia per quelle già fermate in un giro precedente del while, quindi vengono saltate.
+        if (durations[i] > 0) {
+          if (elapsed >= durations[i]) {
+            stopSingleFinger(i); // Il tempo di questo dito è scaduto: spegni i suoi due pin del ponte H.            
+            durations[i] = 0; // Azzera la durata: marca il dito come "già fermato", così nei giri successivi non viene spento di nuovo.
+          } else {
+            anyActive = true; // Il tempo non è ancora scaduto: il motore deve restare acceso.
+          }
+        }
+      }
+      delay(1); // Pausa di 1 ms tra un controllo e l'altro. Evita di occupare la CPU 100%.
+    }
   }
 }
