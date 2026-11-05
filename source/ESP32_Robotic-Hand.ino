@@ -24,8 +24,8 @@ const int e1 = 19;
 const int e2 = 21;
 
 // Config
-const int contractionTimes[5]   = {1000, 1000, 1000, 800, 1000}; // Quanto tempo ci mettono le dita per decontrarsi [ms] - (Pollice, Indice, Medio, Anulare, Mignolo)
-const int decontractionTimes[5] = {800, 800, 800, 600, 700}; // Quanto tempo ci mettono le dita per contrarsi [ms] - (Pollice, Indice, Medio, Anulare, Mignolo)
+const int contractionTimes[5]   = {700, 750, 750, 800, 1000}; // Quanto tempo ci mettono le dita per decontrarsi [ms] - (Pollice, Indice, Medio, Anulare, Mignolo)
+const int decontractionTimes[5] = {500, 550, 550, 570, 700}; // Quanto tempo ci mettono le dita per contrarsi [ms] - (Pollice, Indice, Medio, Anulare, Mignolo)
 
 
 BLECharacteristic *pCharacteristic;
