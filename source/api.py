@@ -2,7 +2,7 @@
 Copyright (c) 2026 GVW - Questo file è protetto dalla licenza AGPL-3.0.
 
 Author: Giulio Segre
-Last modified date: 06-08-2026
+Last modified date: 15-11-2026
 www.giulio-virtual-world.com
 
 ________________________________
@@ -47,7 +47,7 @@ from bleak import BleakClient
 # --- CONFIG: da adattare al tuo ESP32 / server ---------------------------
 ESP32_BLE_ADDRESS = "f4:2d:c9:8d:33:72"                          # indirizzo BLE dell'ESP32
 ESP32_BLE_CHAR_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb"     # UUID characteristic GATT
-WEBHOOK_URL = "https://discord.com/api/webhooks/1532783717313941734/Ntwa9-xqSv_UOM03xi9D-mbs-8o1x9bH8vrxypGVbHgWGV7UCwLEKzKmSP-zD7mrqR2C" # "" per disabilitare
+WEBHOOK_URL = "" # Vuoto per disabilitare
 # ---------------------------------------------------------------------------
 
 
