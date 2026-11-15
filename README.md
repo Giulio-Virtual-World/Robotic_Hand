@@ -55,15 +55,20 @@ Qualsiasi altro pattern non corrisponde a nessuno dei tre gesti (`rps_label = No
 
 # REQUISITI
 
+### Software richiesto
 | Componente | Dettaglio |
 |---|---|
 | Sistema operativo | **Windows** (`installer.py` e `start.py` usano `venv\Scripts\python.exe` e `cmd`) |
 | Python | **3.10 o superiore**, in una versione supportata da MediaPipe (controlla su [pypi.org/project/mediapipe](https://pypi.org/project/mediapipe/)) |
-| Hardware | Webcam, adattatore Bluetooth con supporto BLE, scheda **ESP32** |
 | Librerie Python | `mediapipe`, `opencv-python`, `numpy`, `bleak`, `requests` |
 | Software ESP32 | [Arduino IDE](https://www.arduino.cc/en/software) con il supporto schede ESP32 installato |
 
 > Su Linux/macOS il programma può funzionare, ma `installer.py` e `start.py` no: va fatta l'installazione manuale e il percorso del Python del venv è diverso (`venv/bin/python`).
+
+### Hardware richiesto
+| Componente | Dettaglio |
+|---|---|
+| Ancora non disponibile | -- |
 
 ---
 
@@ -335,6 +340,7 @@ L'ESP32 riceve il messaggio e lo interpreta per eseguire le azioni corrispondent
 Il codice è distribuito con licenza **AGPL-3.0** (come indicato nell'intestazione dei file sorgente).
 
 **Author:** *Giulio Segre*
+
 [*www.giulio-virtual-world.com*](https://www.giulio-virtual-world.com)
 
 **Last modified date:** *15-11-2026*
