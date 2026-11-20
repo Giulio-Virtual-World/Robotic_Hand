@@ -60,8 +60,8 @@ FINGER_NAMES = ["Pollice", "Indice", "Medio", "Anulare", "Mignolo"]
 Soglie per decidere se un dito e' abbassato (distanze NORMALIZZATE sulla dimensione
 della mano = distanza polso -> base del medio). Piu' alto = piu' facile "abbassato".
 '''
-FINGER_CLOSE_RATIO = 0.60  # indice/medio/anulare/mignolo: punta vs. propria base (MCP)
-THUMB_CLOSE_RATIO = 0.45   # pollice: punta vs. base (MCP) di un qualsiasi altro dito
+FINGER_CLOSE_RATIO = 0.50  # indice/medio/anulare/mignolo: punta vs. propria base (MCP)
+THUMB_CLOSE_RATIO = 0.40   # pollice: punta vs. base (MCP) di un qualsiasi altro dito
 
 
 # ----------------------------------------------------------------------------------------
